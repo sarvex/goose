@@ -4,16 +4,21 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"math"
+	"path/filepath"
 	"time"
 
+	"github.com/pressly/goose/v3/internal/migrate"
 	"github.com/pressly/goose/v3/internal/sqladapter"
 )
 
 // Provider is a goose migration provider.
 type Provider struct {
-	db    *sql.DB
-	store sqladapter.Store
-	opt   *ProviderOptions
+	db         *sql.DB
+	store      sqladapter.Store
+	opt        *ProviderOptions
+	migrations []*migrate.Migration
 }
 
 // NewProvider returns a new goose Provider.
@@ -42,13 +47,39 @@ func NewProvider(dialect Dialect, db *sql.DB, opts *ProviderOptions) (*Provider,
 	if err != nil {
 		return nil, err
 	}
-	// TODO(mf): implement the rest of this function
-	// - collect sources
-	// - merge sources into migrations
+	collected, err := collectGoMigrations(opts.Filesystem, opts.Dir, registeredGoMigrations, 0, math.MaxInt64)
+	if err != nil {
+		return nil, err
+	}
+	migrations := make([]*migrate.Migration, 0, len(collected))
+	for _, c := range collected {
+		m := &migrate.Migration{
+			Version:  c.Version,
+			Fullpath: c.Source,
+		}
+		switch filepath.Ext(c.Source) {
+		case ".sql":
+			m.Type = migrate.TypeSQL
+			m.SQLParsed = false
+		case ".go":
+			m.Type = migrate.TypeGo
+			m.Go = &migrate.Go{
+				UseTx:      c.UseTx,
+				UpFn:       c.UpFnContext,
+				DownFn:     c.DownFnContext,
+				UpFnNoTx:   c.UpFnNoTxContext,
+				DownFnNoTx: c.DownFnNoTxContext,
+			}
+		default:
+			return nil, fmt.Errorf("unknown migration type for %q", c.Source)
+		}
+		migrations = append(migrations, m)
+	}
 	return &Provider{
-		db:    db,
-		store: store,
-		opt:   opts,
+		db:         db,
+		store:      store,
+		opt:        opts,
+		migrations: migrations,
 	}, nil
 }
 
