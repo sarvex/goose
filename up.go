@@ -4,8 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/pressly/goose/v3/internal/migrate"
+	"github.com/pressly/goose/v3/internal/sqladapter"
 )
 
 type options struct {
@@ -217,6 +221,37 @@ func findMissingMigrations(knownMigrations, newMigrations Migrations, dbMaxVersi
 	}
 	sort.SliceStable(missing, func(i, j int) bool {
 		return missing[i].Version < missing[j].Version
+	})
+	return missing
+}
+
+type missingMigration struct {
+	versionID int64
+	filename  string
+}
+
+// findMissingMigrations returns a list of migrations that are missing from the database. A missing
+// migration is one that has a version less than the max version in the database.
+func findMissing(
+	dbMigrations []*sqladapter.ListMigrationsResult,
+	fsMigrations []*migrate.Migration,
+	dbMaxVersion int64,
+) []missingMigration {
+	existing := make(map[int64]bool)
+	for _, m := range dbMigrations {
+		existing[m.Version] = true
+	}
+	var missing []missingMigration
+	for _, m := range fsMigrations {
+		if !existing[m.Version] && m.Version < dbMaxVersion {
+			missing = append(missing, missingMigration{
+				versionID: m.Version,
+				filename:  filepath.Base(m.Fullpath),
+			})
+		}
+	}
+	sort.Slice(missing, func(i, j int) bool {
+		return missing[i].versionID < missing[j].versionID
 	})
 	return missing
 }

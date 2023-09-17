@@ -27,9 +27,11 @@ type ProviderOptions struct {
 	Filesystem fs.FS
 
 	Verbose bool
+	Debug   bool
 
 	// Features
 	AllowMissing bool
+	NoVersioning bool
 }
 
 // DefaultOptions returns the default ProviderOptions.
