@@ -24,7 +24,7 @@ var (
 	// ErrNoMigration when there are no migrations to apply. Returned by Down and UpByOne.
 	ErrNoMigration = errors.New("no migration to apply")
 
-	// ErrAlreadyApplied when a migration has already been applied.
+	// ErrAlreadyApplied when a migration has already been applied. Returned by ApplyVersion.
 	ErrAlreadyApplied = errors.New("already applied")
 )
 
@@ -54,7 +54,7 @@ func NewProvider(dialect Dialect, db *sql.DB, opts *ProviderOptions) (*Provider,
 		return nil, errors.New("dialect must not be empty")
 	}
 	if opts == nil {
-		opts = DefaultOptions()
+		opts = DefaultProviderOptions()
 	}
 	if err := validateOptions(opts); err != nil {
 		return nil, err
@@ -63,31 +63,17 @@ func NewProvider(dialect Dialect, db *sql.DB, opts *ProviderOptions) (*Provider,
 	if err != nil {
 		return nil, err
 	}
+	// TODO(mf): avoid using the old collectGoMigrations function and converting between the old
+	// migration type and the new migration type.
 	collected, err := collectGoMigrations(opts.Filesystem, opts.Dir, registeredGoMigrations, 0, math.MaxInt64)
 	if err != nil {
 		return nil, err
 	}
 	migrations := make([]*migrate.Migration, 0, len(collected))
 	for _, c := range collected {
-		m := &migrate.Migration{
-			Version:  c.Version,
-			Fullpath: c.Source,
-		}
-		switch filepath.Ext(c.Source) {
-		case ".sql":
-			m.Type = migrate.TypeSQL
-			m.SQLParsed = false
-		case ".go":
-			m.Type = migrate.TypeGo
-			m.Go = &migrate.Go{
-				UseTx:      c.UseTx,
-				UpFn:       c.UpFnContext,
-				DownFn:     c.DownFnContext,
-				UpFnNoTx:   c.UpFnNoTxContext,
-				DownFnNoTx: c.DownFnNoTxContext,
-			}
-		default:
-			return nil, fmt.Errorf("unknown migration type for %q", c.Source)
+		m, err := convert(c)
+		if err != nil {
+			return nil, err
 		}
 		migrations = append(migrations, m)
 	}
@@ -97,6 +83,30 @@ func NewProvider(dialect Dialect, db *sql.DB, opts *ProviderOptions) (*Provider,
 		opt:        opts,
 		migrations: migrations,
 	}, nil
+}
+
+func convert(old *Migration) (*migrate.Migration, error) {
+	m := &migrate.Migration{
+		Version:  old.Version,
+		Fullpath: old.Source,
+	}
+	switch filepath.Ext(old.Source) {
+	case ".sql":
+		m.Type = migrate.TypeSQL
+		m.SQLParsed = false
+	case ".go":
+		m.Type = migrate.TypeGo
+		m.Go = &migrate.Go{
+			UseTx:      old.UseTx,
+			UpFn:       old.UpFnContext,
+			DownFn:     old.DownFnContext,
+			UpFnNoTx:   old.UpFnNoTxContext,
+			DownFnNoTx: old.DownFnNoTxContext,
+		}
+	default:
+		return nil, fmt.Errorf("unknown migration type for source: %s", old.Source)
+	}
+	return m, nil
 }
 
 // MigrationStatus represents the status of a single migration.
@@ -134,8 +144,8 @@ const (
 
 // Source represents a single migration source.
 //
-// For SQL migrations, Fullpath will always be set. For Go migrations, Fullpath will will be set if
-// the migration has a corresponding file on disk. It will be empty if the migration was registered
+// For SQL migrations, Fullpath will always be set. For Go migrations, Fullpath will be set if the
+// migration has a corresponding file on disk. It will be empty if a migration was registered
 // manually.
 type Source struct {
 	// Type is the type of migration.
@@ -150,7 +160,21 @@ type Source struct {
 
 // ListSources returns a list of all available migration sources the provider is aware of.
 func (p *Provider) ListSources() []*Source {
-	return nil
+	var sources []*Source
+	for _, m := range p.migrations {
+		s := &Source{
+			Fullpath: m.Fullpath,
+			Version:  m.Version,
+		}
+		switch m.Type {
+		case migrate.TypeSQL:
+			s.Type = SourceTypeSQL
+		case migrate.TypeGo:
+			s.Type = SourceTypeGo
+		}
+		sources = append(sources, s)
+	}
+	return sources
 }
 
 // Ping attempts to ping the database to verify a connection is available.
@@ -277,7 +301,7 @@ func (p *Provider) up(ctx context.Context, upByOne bool, version int64) (_ []*Mi
 		retErr = multierr.Append(retErr, cleanup())
 	}()
 	// If there are no migrations to apply, return early. We run this check after initializing the
-	// connection because we need to ensure the version table exists.
+	// connection because the version table is lazily created in the initialize function.
 	if len(p.migrations) == 0 {
 		return nil, nil
 	}
@@ -291,6 +315,9 @@ func (p *Provider) up(ctx context.Context, upByOne bool, version int64) (_ []*Mi
 	dbMigrations, err := p.store.ListMigrations(ctx, conn)
 	if err != nil {
 		return nil, err
+	}
+	if len(dbMigrations) == 0 {
+		return nil, fmt.Errorf("expected at least one migration in the database, but found none")
 	}
 	dbMaxVersion := dbMigrations[0].Version
 	// lookupAppliedInDB is a map of all applied migrations in the database.
@@ -405,30 +432,27 @@ func (p *Provider) initialize(ctx context.Context) (*sql.Conn, func() error, err
 		p.mu.Unlock()
 		return nil, nil, err
 	}
-
 	// cleanup is a function that cleans up the connection, and optionally, the session lock.
 	cleanup := func() error { return nil }
 
-	// switch p.opt.LockMode {
-	// case LockModeAdvisorySession:
-	// 	if err := p.store.LockSession(ctx, conn); err != nil {
-	// 		p.mu.Unlock()
-	// 		return nil, nil, err
-	// 	}
-	// 	cleanup = func() error {
-	// 		defer p.mu.Unlock()
-	// 		return errors.Join(p.store.UnlockSession(ctx, conn), conn.Close())
-	// 	}
+	// switch p.opt.LockMode { case LockModeAdvisorySession:
+	//  if err := p.store.LockSession(ctx, conn); err != nil {
+	//      p.mu.Unlock()
+	//      return nil, nil, err
+	//  }
+	//  cleanup = func() error {
+	//      defer p.mu.Unlock()
+	//      return errors.Join(p.store.UnlockSession(ctx, conn), conn.Close())
+	//  }
 	// case LockModeNone:
-	// 	cleanup = func() error {
-	// 		defer p.mu.Unlock()
-	// 		return conn.Close()
-	// 	}
+	//  cleanup = func() error {
+	//      defer p.mu.Unlock()
+	//      return conn.Close()
+	//  }
 	// default:
-	// 	p.mu.Unlock()
-	// 	return nil, nil, fmt.Errorf("invalid lock mode: %d", p.opt.LockMode)
-	// }
-	// If versioning is enabled, ensure the version table exists.
+	//  p.mu.Unlock()
+	//  return nil, nil, fmt.Errorf("invalid lock mode: %d", p.opt.LockMode)
+	// } If versioning is enabled, ensure the version table exists.
 	//
 	// For ad-hoc migrations, we don't need the version table because there is no versioning.
 	if !p.opt.NoVersioning {
@@ -480,13 +504,12 @@ func (p *Provider) runMigrations(
 	//
 	// A potential solution is to expose a third Go register function *sql.Conn. Or continue to use
 	// *sql.DB and document that the user SHOULD NOT SET max open connections to 1. This is a bit of
-	// an edge case.
-	// if p.opt.LockMode != LockModeNone && p.db.Stats().MaxOpenConnections == 1 {
-	// 	for _, m := range apply {
-	// 		if m.IsGo() && !m.Go.UseTx {
-	// 			return nil, errors.New("potential deadlock detected: cannot run GoMigrationNoTx with max open connections set to 1")
-	// 		}
-	// 	}
+	// an edge case. if p.opt.LockMode != LockModeNone && p.db.Stats().MaxOpenConnections == 1 {
+	//  for _, m := range apply {
+	//      if m.IsGo() && !m.Go.UseTx {
+	//          return nil, errors.New("potential deadlock detected: cannot run GoMigrationNoTx with max open connections set to 1")
+	//      }
+	//  }
 	// }
 
 	// Run migrations individually, opening a new transaction for each migration if the migration is
@@ -500,7 +523,7 @@ func (p *Provider) runMigrations(
 		current := &MigrationResult{
 			Fullpath:  m.Fullpath,
 			Version:   m.Version,
-			Direction: strings.ToLower(direction.String()),
+			Direction: strings.ToLower(string(direction)),
 			Empty:     m.IsEmpty(direction.ToBool()),
 		}
 
@@ -519,6 +542,26 @@ func (p *Provider) runMigrations(
 		results = append(results, current)
 	}
 	return results, nil
+}
+
+// PartialError is returned when a migration fails, but some migrations already got applied.
+type PartialError struct {
+	// Results contains the results of all migrations that were applied before the error occurred.
+	Results []*MigrationResult
+	// Failed contains the result of the migration that failed.
+	Failed *MigrationResult
+	// Err is the error that occurred while running the migration.
+	Err error
+}
+
+func (e *PartialError) Error() string {
+	var filename string
+	if e.Failed != nil {
+		filename = fmt.Sprintf("(%s)", filepath.Base(e.Failed.Fullpath))
+	} else {
+		filename = "(file unknown)"
+	}
+	return fmt.Sprintf("partial migration error %s: %v", filename, e.Err)
 }
 
 // runIndividually runs an individual migration, opening a new transaction if the migration is safe

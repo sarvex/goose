@@ -21,7 +21,6 @@ type ProviderOptions struct {
 	// Default: "goose_db_version"
 	Tablename string
 	// Filesystem is the filesystem used to read the migration files.
-	// Required field.
 	//
 	// Default: read from disk
 	Filesystem fs.FS
@@ -34,8 +33,8 @@ type ProviderOptions struct {
 	NoVersioning bool
 }
 
-// DefaultOptions returns the default ProviderOptions.
-func DefaultOptions() *ProviderOptions {
+// DefaultProviderOptions returns the default ProviderOptions.
+func DefaultProviderOptions() *ProviderOptions {
 	return &ProviderOptions{
 		Dir:        defaultDir,
 		Tablename:  defaultTablename,

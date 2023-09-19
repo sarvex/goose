@@ -15,6 +15,7 @@ const (
 	TypeSQL
 )
 
+// Migration represents a single go or sql migration.
 type Migration struct {
 	// Fullpath is the full path to the migration file.
 	//
@@ -100,9 +101,11 @@ func (g *Go) IsEmpty(direction bool) bool {
 }
 
 func (g *Go) run(ctx context.Context, tx *sql.Tx, direction bool) error {
-	fn := g.DownFn
+	var fn func(context.Context, *sql.Tx) error
 	if direction {
 		fn = g.UpFn
+	} else {
+		fn = g.DownFn
 	}
 	if fn != nil {
 		return fn(ctx, tx)
@@ -111,9 +114,11 @@ func (g *Go) run(ctx context.Context, tx *sql.Tx, direction bool) error {
 }
 
 func (g *Go) runNoTx(ctx context.Context, db *sql.DB, direction bool) error {
-	fn := g.DownFnNoTx
+	var fn func(context.Context, *sql.DB) error
 	if direction {
 		fn = g.UpFnNoTx
+	} else {
+		fn = g.DownFnNoTx
 	}
 	if fn != nil {
 		return fn(ctx, db)
