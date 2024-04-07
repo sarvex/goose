@@ -38,10 +38,10 @@ func (s *state) initProvider(
 	options ...goose.ProviderOption,
 ) (*goose.Provider, error) {
 	if dir == "" {
-		return nil, fmt.Errorf("dir is required")
+		return nil, fmt.Errorf("migrations directory is required, set with --dir or GOOSE_DIR")
 	}
 	if dbstring == "" {
-		return nil, errors.New("dbstring is required")
+		return nil, errors.New("database connection string is required, set with --dbstring or GOOSE_DBSTRING")
 	}
 	db, dialect, err := openConnection(dbstring)
 	if err != nil {

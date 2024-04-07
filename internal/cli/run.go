@@ -19,7 +19,11 @@ func run(ctx context.Context, state *state, args []string) error {
 	root.Subcommands = append(root.Subcommands, newStatusCommand(state))
 
 	// Parse the flags and return help if requested.
-	if err := root.Parse(args); err != nil {
+	err := root.Parse(
+		args,
+		ff.WithEnvVarPrefix("GOOSE"), // Support environment variables for all flags
+	)
+	if err != nil {
 		if errors.Is(err, ff.ErrHelp) {
 			fmt.Fprintf(state.stderr, "\n%s\n", createHelp(root))
 			return nil

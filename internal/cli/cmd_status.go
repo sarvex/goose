@@ -20,8 +20,8 @@ type cmdStatus struct {
 	// flags
 	dir       string
 	dbstring  string
-	useJSON   bool
 	tablename string
+	useJSON   bool
 }
 
 func newStatusCommand(state *state) *ff.Command {
@@ -29,9 +29,11 @@ func newStatusCommand(state *state) *ff.Command {
 		state: state,
 		fs:    ff.NewFlagSet("status"),
 	}
+	// Mandatory flags
+	_, _ = c.fs.AddFlag(newDirFlag(&c.dir))
+	_, _ = c.fs.AddFlag(newDBStringFlag(&c.dbstring))
+	// Optional flags
 	c.fs.BoolConfig(newJSONFlag(&c.useJSON))
-	c.fs.StringConfig(newDirFlag(&c.dir), "")
-	c.fs.StringConfig(newDBStringFlag(&c.dbstring), "")
 	c.fs.StringConfig(newTablenameFlag(&c.tablename), goose.DefaultTablename)
 
 	return &ff.Command{
