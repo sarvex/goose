@@ -120,7 +120,7 @@ func rootHelp(cmd *ff.Command, render func(s string) string) ffhelp.Help {
 	buf := bytes.NewBuffer(nil)
 	tw := tabwriter.NewWriter(buf, 0, 0, 2, ' ', 0)
 	for _, v := range keys {
-		tw.Write([]byte(ffhelp.DefaultLinePrefix + v.name + "\t" + v.description + "\n"))
+		_, _ = tw.Write([]byte(ffhelp.DefaultLinePrefix + v.name + "\t" + v.description + "\n"))
 	}
 	tw.Flush()
 	section.Lines = append(section.Lines, buf.String())

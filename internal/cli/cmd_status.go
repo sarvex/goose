@@ -29,10 +29,10 @@ func newStatusCommand(state *state) *ff.Command {
 		state: state,
 		fs:    ff.NewFlagSet("status"),
 	}
-	c.fs.AddFlag(newDirFlag(&c.dir))
-	c.fs.AddFlag(newDBStringFlag(&c.dbstring))
-	c.fs.AddFlag(newJSONFlag(&c.useJSON))
-	c.fs.AddFlag(newTablenameFlag(&c.tablename))
+	c.fs.BoolConfig(newJSONFlag(&c.useJSON))
+	c.fs.StringConfig(newDirFlag(&c.dir), "")
+	c.fs.StringConfig(newDBStringFlag(&c.dbstring), "")
+	c.fs.StringConfig(newTablenameFlag(&c.tablename), goose.DefaultTablename)
 
 	return &ff.Command{
 		Name:      "status",

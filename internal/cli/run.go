@@ -39,7 +39,7 @@ func checkRequiredFlags(cmd *ff.Command) error {
 		cmd = cmd.GetSelected()
 	}
 	var required []string
-	cmd.Flags.WalkFlags(func(f ff.Flag) error {
+	if err := cmd.Flags.WalkFlags(func(f ff.Flag) error {
 		name, ok := f.GetLongName()
 		if !ok {
 			return fmt.Errorf("flag %v doesn't have a long name", f)
@@ -48,18 +48,20 @@ func checkRequiredFlags(cmd *ff.Command) error {
 			required = append(required, "--"+name)
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 	if len(required) > 0 {
 		return fmt.Errorf("required flags not set: %v", strings.Join(required, ", "))
 	}
 	return nil
 }
 
-func coalesce[T comparable](values ...T) (zero T) {
-	for _, v := range values {
-		if v != zero {
-			return v
-		}
-	}
-	return zero
-}
+// func coalesce[T comparable](values ...T) (zero T) {
+// 	for _, v := range values {
+// 		if v != zero {
+// 			return v
+// 		}
+// 	}
+// 	return zero
+// }

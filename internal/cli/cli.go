@@ -26,11 +26,7 @@ func Main() {
 			os.Exit(1)
 		}
 	}()
-	select {
-	case <-ctx.Done():
-		stop()
-	}
-	// TODO(mf): should we os exit or return a code and let the caller decide?
+	<-ctx.Done()
 	os.Exit(0)
 }
 
