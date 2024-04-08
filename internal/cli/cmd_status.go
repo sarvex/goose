@@ -24,20 +24,26 @@ type cmdStatus struct {
 	useJSON   bool
 }
 
+// TODO(mf): there is something not very ergonomic about how all this works. Will need to think
+// about how to improve this and file an issue upstream. I wish the default could be set here,
+// instead of in the flag definition.
+func mustFlag(fs *ff.FlagSet, cfg ff.FlagConfig) {
+	if _, err := fs.AddFlag(cfg); err != nil {
+		panic(err)
+	}
+}
+
 func newStatusCommand(state *state) (*ff.Command, error) {
 	c := cmdStatus{
 		state: state,
 		fs:    ff.NewFlagSet("status"),
 	}
 	// Mandatory flags
-	_, _ = c.fs.AddFlag(newDirFlag(&c.dir))
-	_, _ = c.fs.AddFlag(newDBStringFlag(&c.dbstring))
+	mustFlag(c.fs, newDirFlag(&c.dir))
+	mustFlag(c.fs, newDBStringFlag(&c.dbstring))
 	// Optional flags
-	_, _ = c.fs.AddFlag(newJSONFlag(&c.useJSON))
-	// TODO(mf): there is something not very ergonomic about how all this works. Will need to think
-	// about how to improve this and file an issue upstream. I wish the default could be set here,
-	// instead of in the flag definition.
-	_, _ = c.fs.AddFlag(newTablenameFlag(&c.tablename))
+	mustFlag(c.fs, newTablenameFlag(&c.tablename))
+	mustFlag(c.fs, newJSONFlag(&c.useJSON))
 
 	return &ff.Command{
 		Name:      "status",
