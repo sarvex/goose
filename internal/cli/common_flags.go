@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffval"
+	"github.com/pressly/goose/v3"
 )
 
 var requiredFlags = map[string]bool{
@@ -41,7 +44,7 @@ func newJSONFlag(b *bool) ff.FlagConfig {
 func newTablenameFlag(b *string) ff.FlagConfig {
 	return ff.FlagConfig{
 		LongName:    "table",
-		Usage:       "migration table name",
+		Usage:       fmt.Sprintf("migration table name (default: %s)", goose.DefaultTablename),
 		Value:       ffval.NewValue(b),
 		Placeholder: "string",
 	}

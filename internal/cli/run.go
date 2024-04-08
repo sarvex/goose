@@ -13,10 +13,19 @@ const (
 	ENV_NO_COLOR = "NO_COLOR"
 )
 
-func run(ctx context.Context, state *state, args []string) error {
-	root := newRootCommand(state)
+func run(ctx context.Context, st *state, args []string) error {
+	root := newRootCommand(st)
 	// Add subcommands
-	root.Subcommands = append(root.Subcommands, newStatusCommand(state))
+	commands := []func(*state) (*ff.Command, error){
+		newStatusCommand,
+	}
+	for _, cmd := range commands {
+		c, err := cmd(st)
+		if err != nil {
+			return err
+		}
+		root.Subcommands = append(root.Subcommands, c)
+	}
 
 	// Parse the flags and return help if requested.
 	err := root.Parse(
@@ -25,7 +34,7 @@ func run(ctx context.Context, state *state, args []string) error {
 	)
 	if err != nil {
 		if errors.Is(err, ff.ErrHelp) {
-			fmt.Fprintf(state.stderr, "\n%s\n", createHelp(root))
+			fmt.Fprintf(st.stderr, "\n%s\n", createHelp(root))
 			return nil
 		}
 		return err

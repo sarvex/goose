@@ -24,7 +24,7 @@ type cmdStatus struct {
 	useJSON   bool
 }
 
-func newStatusCommand(state *state) *ff.Command {
+func newStatusCommand(state *state) (*ff.Command, error) {
 	c := cmdStatus{
 		state: state,
 		fs:    ff.NewFlagSet("status"),
@@ -34,7 +34,10 @@ func newStatusCommand(state *state) *ff.Command {
 	_, _ = c.fs.AddFlag(newDBStringFlag(&c.dbstring))
 	// Optional flags
 	_, _ = c.fs.AddFlag(newJSONFlag(&c.useJSON))
-	c.fs.StringConfig(newTablenameFlag(&c.tablename), goose.DefaultTablename)
+	// TODO(mf): there is something not very ergonomic about how all this works. Will need to think
+	// about how to improve this and file an issue upstream. I wish the default could be set here,
+	// instead of in the flag definition.
+	_, _ = c.fs.AddFlag(newTablenameFlag(&c.tablename))
 
 	return &ff.Command{
 		Name:      "status",
@@ -43,7 +46,7 @@ func newStatusCommand(state *state) *ff.Command {
 		LongHelp:  strings.TrimSpace(statusLongHelp),
 		Flags:     c.fs,
 		Exec:      c.exec,
-	}
+	}, nil
 }
 
 const (
