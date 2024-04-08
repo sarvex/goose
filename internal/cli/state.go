@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,12 +15,15 @@ import (
 	"github.com/pressly/goose/v3/database"
 )
 
+// state holds the state of the CLI and is passed to each command. It is used to configure the
+// environment, filesystem, and output streams.
 type state struct {
 	environ []string
 	stdout  io.Writer
 	stderr  io.Writer
 	// This is effectively [fs.SubFS](https://pkg.go.dev/io/fs#SubFS).
-	fsys func(dir string) (fs.FS, error)
+	fsys           func(dir string) (fs.FS, error)
+	openConnection func(dbstring string) (*sql.DB, goose.Dialect, error)
 }
 
 func (s *state) writeJSON(v interface{}) error {

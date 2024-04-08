@@ -27,12 +27,12 @@ func newRootCommand(state *state) *ff.Command {
 		Usage:     "goose <command> [flags] [args...]",
 		ShortHelp: "A database migration tool. Supports SQL migrations and Go functions.",
 		Flags:     c.fs,
-		Exec:      c.Exec,
+		Exec:      c.exec,
 	}
 	return cmd
 }
 
-func (c *cmdRoot) Exec(ctx context.Context, args []string) error {
+func (c *cmdRoot) exec(ctx context.Context, args []string) error {
 	if c.version {
 		fmt.Fprintf(c.state.stdout, "goose version: %s\n", getVersionFromBuildInfo())
 		return nil

@@ -2,8 +2,8 @@ package cli
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/internal/cli/normalizedsn"
@@ -45,11 +45,6 @@ func openConnection(dbstring string) (*sql.DB, goose.Dialect, error) {
 	default:
 		dataSourceName = dbURL.DSN
 	}
-	// The driver name is used by the goose CLI to open the database connection. It is specific to
-	// the goose CLI and the driver imports in ./cmd/goose.
-	//
-	// TODO(mf): this isn't very generic if folks are importing this into their own codebase. We
-	// should consider extractting this logic into an option.
 	driverName, ok := dialectToDriverMapping[dialect]
 	if !ok {
 		return nil, "", fmt.Errorf("unknown database dialect: %s", dialect)
@@ -61,7 +56,8 @@ func openConnection(dbstring string) (*sql.DB, goose.Dialect, error) {
 	return db, dialect, nil
 }
 
-// resolveDialect returns the dialect for the given string.
+// resolveDialect returns the dialect for the first string that matches a known dialect alias or
+// schema name. If no match is found, an error is returned.
 //
 // The string can be a schema name or an alias. The aliases are defined by the dburl package for
 // common databases. See: https://github.com/xo/dburl#database-schemes-aliases-and-drivers
@@ -84,9 +80,7 @@ func resolveDialect(ss ...string) (goose.Dialect, error) {
 			return goose.DialectClickHouse, nil
 		case "vertica", "ve":
 			return goose.DialectVertica, nil
-		default:
-			return "", fmt.Errorf("unknown dialect: %q", s)
 		}
 	}
-	return "", errors.New("failed to resolve schema name or alias to a dialect")
+	return "", fmt.Errorf("failed to resolve scheme names or aliases to a dialect: %q", strings.Join(ss, ","))
 }

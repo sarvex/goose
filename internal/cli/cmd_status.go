@@ -42,7 +42,7 @@ func newStatusCommand(state *state) *ff.Command {
 		ShortHelp: "List the status of all migrations",
 		LongHelp:  strings.TrimSpace(statusLongHelp),
 		Flags:     c.fs,
-		Exec:      c.Exec,
+		Exec:      c.exec,
 	}
 }
 
@@ -54,12 +54,8 @@ timestamp it was applied, otherwise it will be listed as "Pending".
 `
 )
 
-func (c *cmdStatus) Exec(ctx context.Context, args []string) error {
-	p, err := c.state.initProvider(
-		c.dir,
-		c.dbstring,
-		c.tablename,
-	)
+func (c *cmdStatus) exec(ctx context.Context, args []string) error {
+	p, err := c.state.initProvider(c.dir, c.dbstring, c.tablename)
 	if err != nil {
 		return err
 	}

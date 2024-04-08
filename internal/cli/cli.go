@@ -26,12 +26,13 @@ func Main() {
 			os.Exit(1)
 		}
 	}()
+
 	<-ctx.Done()
 	os.Exit(0)
 }
 
 // Run runs the CLI with the provided arguments. The arguments should not include the command name
-// itself, only the arguments to the command, e.g., os.Args[1:].
+// itself, only the arguments to the command, use os.Args[1:].
 //
 // RunOptions can be used to customize the behavior of the CLI, such as setting the environment,
 // redirecting stdout and stderr, and providing a custom filesystem such as embed.FS.
@@ -40,12 +41,19 @@ func Run(ctx context.Context, args []string, opts ...RunOptions) error {
 		environ: os.Environ(),
 		stdout:  os.Stdout,
 		stderr:  os.Stderr,
-		fsys:    func(dir string) (fs.FS, error) { return os.DirFS(dir), nil },
 	}
 	for _, opt := range opts {
 		if err := opt.apply(state); err != nil {
 			return err
 		}
+	}
+	if state.fsys == nil {
+		// Use the default filesystem if not set, reading from the local filesystem.
+		state.fsys = func(dir string) (fs.FS, error) { return os.DirFS(dir), nil }
+	}
+	if state.openConnection == nil {
+		// Use the default openConnection function if not set.
+		state.openConnection = openConnection
 	}
 	return run(ctx, state, args)
 }
