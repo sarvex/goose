@@ -33,7 +33,7 @@ func newStatusCommand(state *state) *ff.Command {
 	_, _ = c.fs.AddFlag(newDirFlag(&c.dir))
 	_, _ = c.fs.AddFlag(newDBStringFlag(&c.dbstring))
 	// Optional flags
-	c.fs.BoolConfig(newJSONFlag(&c.useJSON))
+	_, _ = c.fs.AddFlag(newJSONFlag(&c.useJSON))
 	c.fs.StringConfig(newTablenameFlag(&c.tablename), goose.DefaultTablename)
 
 	return &ff.Command{
