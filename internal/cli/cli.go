@@ -18,15 +18,16 @@ import (
 func Main() {
 	ctx, stop := newContext()
 	defer stop()
-
-	go func() {
-		defer stop()
-		if err := Run(ctx, os.Args[1:]); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "unexpected error: %v\n", r)
 			os.Exit(1)
 		}
 	}()
-
+	if err := Run(ctx, os.Args[1:]); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 	<-ctx.Done()
 	os.Exit(0)
 }
