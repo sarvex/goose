@@ -34,7 +34,7 @@ func newRootCommand(state *state) *ff.Command {
 
 func (c *cmdRoot) exec(ctx context.Context, args []string) error {
 	if c.version {
-		fmt.Fprintf(c.state.stdout, "goose version: %s\n", getVersionFromBuildInfo())
+		fmt.Fprintf(c.state.stdout, "goose version: %s\n", c.state.version)
 		return nil
 	}
 	return nil

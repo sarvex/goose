@@ -15,7 +15,7 @@ import (
 // If an error is returned, it is printed to stderr and the process exits with a non-zero exit code.
 // The process is also canceled when an interrupt signal is received. This function and does not
 // return.
-func Main() {
+func Main(options ...Options) {
 	ctx, stop := newContext()
 	defer stop()
 	defer func() {
@@ -24,7 +24,7 @@ func Main() {
 			os.Exit(1)
 		}
 	}()
-	if err := Run(ctx, os.Args[1:]); err != nil {
+	if err := Run(ctx, os.Args[1:], options...); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -35,18 +35,23 @@ func Main() {
 // Run runs the CLI with the provided arguments. The arguments should not include the command name
 // itself, only the arguments to the command, use os.Args[1:].
 //
-// RunOptions can be used to customize the behavior of the CLI, such as setting the environment,
+// Options can be used to customize the behavior of the CLI, such as setting the environment,
 // redirecting stdout and stderr, and providing a custom filesystem such as embed.FS.
-func Run(ctx context.Context, args []string, opts ...RunOptions) error {
+func Run(ctx context.Context, args []string, opts ...Options) error {
 	state := &state{
 		environ: os.Environ(),
-		stdout:  os.Stdout,
-		stderr:  os.Stderr,
 	}
 	for _, opt := range opts {
 		if err := opt.apply(state); err != nil {
 			return err
 		}
+	}
+	// Set defaults if not set by the caller.
+	if state.stdout == nil {
+		state.stdout = os.Stdout
+	}
+	if state.stderr == nil {
+		state.stderr = os.Stderr
 	}
 	if state.fsys == nil {
 		// Use the default filesystem if not set, reading from the local filesystem.
