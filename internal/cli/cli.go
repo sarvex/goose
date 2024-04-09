@@ -15,7 +15,7 @@ import (
 // If an error is returned, it is printed to stderr and the process exits with a non-zero exit code.
 // The process is also canceled when an interrupt signal is received. This function and does not
 // return.
-func Main(options ...Options) {
+func Main(opts ...Options) {
 	ctx, stop := newContext()
 	defer stop()
 	defer func() {
@@ -24,7 +24,7 @@ func Main(options ...Options) {
 			os.Exit(1)
 		}
 	}()
-	if err := Run(ctx, os.Args[1:], options...); err != nil {
+	if err := Run(ctx, os.Args[1:], opts...); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
