@@ -13,12 +13,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const (
+	version = "devel"
+)
+
 func TestRun(t *testing.T) {
 	t.Run("version", func(t *testing.T) {
 		stdout, stderr, err := runCommand("--version")
 		require.NoError(t, err)
 		assert.Empty(t, stderr)
-		assert.Equal(t, stdout, "goose version: devel (unknown revision)\n")
+		assert.Equal(t, stdout, "goose version: "+version+"\n")
 	})
 	t.Run("with_filesystem", func(t *testing.T) {
 		fsys := fstest.MapFS{
@@ -41,6 +45,12 @@ func TestRun(t *testing.T) {
 
 func runCommand(args ...string) (string, string, error) {
 	stdout, stderr := bytes.NewBuffer(nil), bytes.NewBuffer(nil)
-	err := Run(context.Background(), args, WithStdout(stdout), WithStderr(stderr))
+	err := Run(
+		context.Background(),
+		args,
+		WithStdout(stdout),
+		WithStderr(stderr),
+		WithVersion(version),
+	)
 	return stdout.String(), stderr.String(), err
 }
