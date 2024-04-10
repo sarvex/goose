@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"strings"
 
 	"github.com/peterbourgon/ff/v4"
@@ -13,7 +15,17 @@ const (
 	ENV_NO_COLOR = "NO_COLOR"
 )
 
-func run(ctx context.Context, st *state, args []string) error {
+func run(ctx context.Context, args []string, opts ...Options) (retErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			retErr = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	st, err := newStateWithDefaults(opts...)
+	if err != nil {
+		return err
+	}
+
 	root := newRootCommand(st)
 	// Add subcommands
 	commands := []func(*state) (*ff.Command, error){
@@ -28,11 +40,10 @@ func run(ctx context.Context, st *state, args []string) error {
 	}
 
 	// Parse the flags and return help if requested.
-	err := root.Parse(
+	if err := root.Parse(
 		args,
 		ff.WithEnvVarPrefix("GOOSE"), // Support environment variables for all flags
-	)
-	if err != nil {
+	); err != nil {
 		if errors.Is(err, ff.ErrHelp) {
 			fmt.Fprintf(st.stderr, "\n%s\n", createHelp(root))
 			return nil
@@ -45,6 +56,33 @@ func run(ctx context.Context, st *state, args []string) error {
 		return err
 	}
 	return root.Run(ctx)
+}
+
+func newStateWithDefaults(opts ...Options) (*state, error) {
+	state := &state{
+		environ: os.Environ(),
+	}
+	for _, opt := range opts {
+		if err := opt.apply(state); err != nil {
+			return nil, err
+		}
+	}
+	// Set defaults if not set by the caller
+	if state.stdout == nil {
+		state.stdout = os.Stdout
+	}
+	if state.stderr == nil {
+		state.stderr = os.Stderr
+	}
+	if state.fsys == nil {
+		// Use the default filesystem if not set, reading from the local filesystem.
+		state.fsys = func(dir string) (fs.FS, error) { return os.DirFS(dir), nil }
+	}
+	if state.openConnection == nil {
+		// Use the default openConnection function if not set.
+		state.openConnection = openConnection
+	}
+	return state, nil
 }
 
 func checkRequiredFlags(cmd *ff.Command) error {

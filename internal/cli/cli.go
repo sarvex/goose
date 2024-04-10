@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/signal"
 	"runtime"
@@ -17,17 +16,15 @@ import (
 // return.
 func Main(opts ...Options) {
 	ctx, stop := newContext()
-	defer stop()
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "unexpected error: %v\n", r)
+	go func() {
+		defer stop()
+		if err := Run(ctx, os.Args[1:], opts...); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	}()
-	if err := Run(ctx, os.Args[1:], opts...); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
+	// TODO(mf): this looks wonky because we're not waiting for the context to be done. But
+	// eventually, I'd like to add a timeout here so we don't hang indefinitely.
 	<-ctx.Done()
 	os.Exit(0)
 }
@@ -38,30 +35,7 @@ func Main(opts ...Options) {
 // Options can be used to customize the behavior of the CLI, such as setting the environment,
 // redirecting stdout and stderr, and providing a custom filesystem such as embed.FS.
 func Run(ctx context.Context, args []string, opts ...Options) error {
-	state := &state{
-		environ: os.Environ(),
-	}
-	for _, opt := range opts {
-		if err := opt.apply(state); err != nil {
-			return err
-		}
-	}
-	// Set defaults if not set by the caller.
-	if state.stdout == nil {
-		state.stdout = os.Stdout
-	}
-	if state.stderr == nil {
-		state.stderr = os.Stderr
-	}
-	if state.fsys == nil {
-		// Use the default filesystem if not set, reading from the local filesystem.
-		state.fsys = func(dir string) (fs.FS, error) { return os.DirFS(dir), nil }
-	}
-	if state.openConnection == nil {
-		// Use the default openConnection function if not set.
-		state.openConnection = openConnection
-	}
-	return run(ctx, state, args)
+	return run(ctx, args, opts...)
 }
 
 func newContext() (context.Context, context.CancelFunc) {
