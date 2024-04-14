@@ -164,8 +164,8 @@ github.com/mattn/go-runewidth v0.0.12/go.mod h1:RAqKPSqVFrSLVXbA8x7dzmKdmGzieGRC
 github.com/mattn/go-runewidth v0.0.15 h1:UNAjwbU9l54TA3KzvqLGxwWjHmMgBUVhBiTjelZgg3U=
 github.com/mattn/go-runewidth v0.0.15/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/mattn/go-sqlite3 v1.14.22 h1:2gZY6PC6kBnID23Tichd1K+Z0oS6nE/XwU+Vz/5o4kU=
-github.com/mfridman/buildversion v0.2.0 h1:ftftuPYkulAUYU5A4V19NVoONFgVGpUHfXtI+V8uwmg=
-github.com/mfridman/buildversion v0.2.0/go.mod h1:sfXvYxwfmLvkklTJLv9xJ0Wffw57z9ZFOK4KOGJYafU=
+github.com/mfridman/buildversion v0.3.0 h1:hehEX3IbBZJBqquXctUEOWJfIM46P0ku9naK9h1BGuY=
+github.com/mfridman/buildversion v0.3.0/go.mod h1:sfXvYxwfmLvkklTJLv9xJ0Wffw57z9ZFOK4KOGJYafU=
 github.com/mfridman/interpolate v0.0.2 h1:pnuTK7MQIxxFz1Gr+rjSIx9u7qVjf5VOoM/u6BbAxPY=
 github.com/mfridman/interpolate v0.0.2/go.mod h1:p+7uk6oE07mpE/Ik1b8EckO0O4ZXiGAfshKBWLUM9Xg=
 github.com/microsoft/go-mssqldb v1.7.0 h1:sgMPW0HA6Ihd37Yx0MzHyKD726C2kY/8KJsQtXHNaAs=

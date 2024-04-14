@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/go-sql-driver/mysql v1.8.0
 	github.com/jackc/pgx/v5 v5.5.5
-	github.com/mfridman/buildversion v0.2.0
+	github.com/mfridman/buildversion v0.3.0
 	github.com/mfridman/interpolate v0.0.2
 	github.com/microsoft/go-mssqldb v1.7.0
 	github.com/peterbourgon/ff/v4 v4.0.0-alpha.4

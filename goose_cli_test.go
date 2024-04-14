@@ -182,7 +182,7 @@ func buildGooseCLI(t *testing.T, lite bool) gooseBinary {
 	args := []string{
 		"build",
 		"-o", output,
-		"-ldflags=-s -w -X github.com/mfridman/buildversion.Version=" + gooseTestBinaryVersion,
+		"-ldflags=-s -w -X main.version=" + gooseTestBinaryVersion,
 	}
 	if lite {
 		args = append(args, "-tags=no_clickhouse no_mssql no_mysql no_vertica no_postgres")

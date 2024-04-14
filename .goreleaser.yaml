@@ -21,7 +21,7 @@ builds:
     ldflags:
       # The v prefix is stripped by goreleaser, so we need to add it back.
       # https://goreleaser.com/customization/templates/#fnref:version-prefix
-      - "-s -w -X github.com/mfridman/buildversion.Version=v{{ .Version }}"
+      - "-s -w -X main.version=v{{ .Version }}"
 
 archives:
   - format: binary

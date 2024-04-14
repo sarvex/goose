@@ -40,9 +40,11 @@ var (
 	timeout      = flags.Duration("timeout", 0, "maximum allowed duration for queries to run; e.g., 1h13m")
 )
 
+var version string
+
 func main() {
 	if ok, err := strconv.ParseBool(os.Getenv("GOOSE_CLI")); err == nil && ok {
-		cli.Main(cli.WithVersion(buildversion.New()))
+		cli.Main(cli.WithVersion(buildversion.New(version)))
 		return
 	}
 	ctx := context.Background()
@@ -54,7 +56,7 @@ func main() {
 	}
 
 	if *versionFlag {
-		fmt.Printf("goose version: %s\n", buildversion.New())
+		fmt.Printf("goose version: %s\n", buildversion.New(version))
 		return
 	}
 	if *verbose {
